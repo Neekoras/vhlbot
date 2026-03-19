@@ -1,0 +1,42 @@
+/* Injected styles for HW Assistant fill buttons */
+
+.hwa-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hwa-fill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #6c8ef5;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  transition: background 0.15s, transform 0.1s;
+  /* sit in normal flow, right next to the input */
+}
+
+.hwa-fill-btn:hover {
+  background: #8aaaf8;
+  transform: scale(1.1);
+}
+
+.hwa-fill-btn:active {
+  transform: scale(0.95);
+}
+
+.hwa-fill-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
