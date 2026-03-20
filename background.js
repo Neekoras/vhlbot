@@ -92,14 +92,11 @@ async function callClaude({ apiKey, messages, systemPrompt, maxTokens = 1024 }) 
 
 // ── Replicate ──
 async function callReplicate({ apiKey, messages, systemPrompt, maxTokens = 1024 }) {
-  // Build a single prompt string from the conversation
-  const prompt = messages.map((m) => {
-    const tag = m.role === "user" ? "user" : "assistant";
-    return `<|${tag}|>\n${m.content}`;
-  }).join("\n") + "\n<|assistant|>";
+  // Claude on Replicate takes the last user message as `prompt`
+  const prompt = messages[messages.length - 1].content;
 
   // Create prediction
-  const createRes = await fetch("https://api.replicate.com/v1/models/anthropic/claude-sonnet-4-5/predictions", {
+  const createRes = await fetch("https://api.replicate.com/v1/models/anthropic/claude-4.5-sonnet/predictions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
