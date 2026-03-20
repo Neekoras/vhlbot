@@ -1,95 +1,78 @@
 # VHLbot
 
-A Chrome extension that auto-fills Spanish homework answers directly into text boxes on VHL Central and similar platforms. Built for students who want instant answers without switching tabs.
+A Chrome extension for VHL Central that reads your Spanish homework page and answers it. Auto-fills text boxes, scans graded assignments to explain what you got wrong, and supports follow-up questions.
+
+Only activates on `vhlcentral.com`. Invisible everywhere else.
 
 ---
 
 ## How it works
 
-VHLbot runs silently in the background on every page. It detects text input fields, reads the surrounding question context, and places a small **✨ button** next to each one. When clicked, it sends the question to Claude AI and types the correct Spanish answer into the box — no copy-pasting, no switching windows.
+**Inline fill (✨ buttons)**
+VHLbot injects a small ✨ button next to every text input on the page. Click one — it reads the question from the surrounding DOM, calls the AI, and types the correct Spanish answer directly into the box. Dispatches native input events so VHL's form handlers register the change.
 
-It also includes a side panel with a full chat interface for explanations, follow-up questions, and scanning entire pages for homework content.
+**Autofill**
+The AUTOFILL pill in the header runs the fill operation on every input on the page at once, in sequence.
+
+**Scanning**
+The SCANNING pill reads the full page — including same-origin iframes where VHL loads exercises — and sends the content to the AI. If the page has open questions, it answers them. If the page is already graded, it identifies what you got wrong, states the correct answer, and explains why in plain terms. Programmatically re-injects the content script if needed (e.g. after extension reload).
+
+**Chat**
+The side panel includes a chat input for follow-up questions. Grammar rules, conjugations, vocab — ask directly. Page scanning is the primary mode; chat is secondary.
 
 ---
 
 ## Features
 
-- **Inline fill buttons** — a ✨ button appears next to every text input on the page
-- **Auto-answer** — detects the question from labels, aria attributes, or surrounding DOM text, then fills the correct Spanish response
-- **Framework-aware input filling** — dispatches native `input` and `change` events so React/Vue/Angular forms register the change
-- **MutationObserver** — watches for dynamically added inputs (Google Classroom, Quizlet, etc.) and injects buttons automatically
-- **Side panel chat** — ask follow-up questions or get full page explanations
-- **Page scanner** — reads the entire page and identifies all homework questions at once
-- **Conversation history** — multi-turn chat that remembers context within a session
-- **Local key storage** — your API key is stored in Chrome's local storage and never leaves your browser except to call the Anthropic API
+- ✨ buttons on every text input — click to fill a single answer
+- AUTOFILL — fills all inputs on the page at once
+- SCANNING — reads the full page and answers open questions or explains wrong answers on graded assignments
+- Iframe-aware DOM extraction — reads exercise frames, not just the outer page
+- Auto-injects content script if not loaded (no page refresh needed after extension reload)
+- Supports Anthropic and Replicate as AI providers — switch at setup
+- Side panel only enabled on `vhlcentral.com` — disabled and hidden on all other tabs
+- API key stored locally in `chrome.storage.local` — never leaves your browser except to call the AI API
+- Conversation history preserved within a session
 
 ---
 
 ## Installation
 
-> VHLbot is not on the Chrome Web Store. Load it manually as an unpacked extension.
+VHLbot is not on the Chrome Web Store. Load it as an unpacked extension.
 
-**Step 1 — Clone the repo**
+**1. Clone**
 
 ```bash
 git clone https://github.com/Neekoras/vhlbot.git
-cd vhlbot
 ```
 
-**Step 2 — Load in Chrome**
+**2. Load in Chrome**
 
-1. Open Chrome and go to `chrome://extensions`
-2. Enable **Developer mode** (toggle in the top right)
+1. Go to `chrome://extensions`
+2. Enable **Developer mode** (top right)
 3. Click **Load unpacked**
 4. Select the `vhlbot` folder
 
-The extension icon will appear in your toolbar.
+**3. Add your API key**
 
-**Step 3 — Add your API key**
+Click the VHLbot icon while on any VHL Central page. On first launch you'll see a setup screen — choose your provider and paste your key.
 
-1. Click the VHLbot icon to open the side panel
-2. Go to https://console.anthropic.com/settings/keys and create a free key
-3. Paste it into the setup screen and click **Save & continue**
-
-You're ready.
+| Provider | Key format | Get a key |
+|---|---|---|
+| Anthropic | `sk-ant-...` | console.anthropic.com/settings/keys |
+| Replicate | `r8_...` | replicate.com/account/api-tokens |
 
 ---
 
 ## Usage
 
-### Auto-fill (main feature)
-
-1. Navigate to your VHL Central assignment or any Spanish homework page
-2. Look for the **✨** buttons that appear next to each text box
-3. Click ✨ — the answer is filled in automatically
-4. The button flashes ✅ when done
-
-If a button shows ❌, the question context couldn't be read or the API call failed. See Troubleshooting below.
-
-### Side panel chat
-
-Click the VHLbot toolbar icon to open the side panel.
-
-| Action | What it does |
+| Action | How |
 |---|---|
-| **SCAN PAGE** | Reads the current page and explains all Spanish questions found |
-| **Type in the input** | Ask a follow-up question or paste a question manually |
-| **Enter** | Send message |
-| **Shift + Enter** | New line |
-| **⚙ gear icon** | Reset your API key |
-
----
-
-## Stack
-
-| Layer | Technology |
-|---|---|
-| Extension | Chrome Manifest V3 |
-| UI | Side Panel API |
-| AI | Claude claude-sonnet-4-6 (Anthropic) |
-| Fonts | Playfair Display, DM Mono, DM Sans |
-| Styling | Vanilla CSS — no frameworks |
-| Scripting | Vanilla JS — no bundler |
+| Fill one answer | Click ✨ next to a text box |
+| Fill all answers | Click **AUTOFILL** in the header |
+| Scan the page | Click **SCANNING** in the header |
+| Ask a question | Type in the chat input and press Enter |
+| Reset API key | Click the gear icon |
 
 ---
 
@@ -97,59 +80,49 @@ Click the VHLbot toolbar icon to open the side panel.
 
 ```
 vhlbot/
-├── manifest.json        Chrome extension manifest (MV3)
-├── background.js        Service worker — API calls, side panel toggle
-├── content.js           Injected into every page — detects inputs, injects ✨ buttons
+├── manifest.json        MV3 manifest — permissions, content script rules
+├── background.js        Service worker — API calls, side panel policy
+├── content.js           Page script — ✨ buttons, DOM extraction, iframe reading
 ├── content.css          Styles for injected fill buttons
 ├── sidepanel.html       Side panel markup
 ├── sidepanel.css        Side panel styles
-├── sidepanel.js         Side panel logic — chat, scan, state
-└── icons/
-    ├── icon16.png
-    ├── icon48.png
-    └── icon128.png
+├── sidepanel.js         Side panel logic — chat, scan, autofill, state
+└── icons/               16, 48, 128, 256px PNG icons
 ```
 
 ---
 
-## How answers are generated
+## AI providers
 
-The background service worker calls the Anthropic API directly from the browser using the `anthropic-dangerous-direct-browser-calls` header required for browser-side API access.
+**Anthropic (default)**
+Calls `claude-sonnet-4-6` directly from the browser via the Anthropic API.
 
-For inline fill buttons, VHLbot uses a strict system prompt:
-
-> "Respond with ONLY the correct Spanish answer. No explanations, no labels, no punctuation outside the answer itself."
-
-For the chat/scan panel, VHLbot uses a tutor-mode prompt that explains concepts and walks through reasoning without just handing over answers.
+**Replicate**
+Routes through Replicate using `anthropic/claude-4.5-sonnet`. Same model, billed through your Replicate account. Provider is auto-detected from the key prefix — `r8_` routes to Replicate, `sk-ant-` routes to Anthropic directly.
 
 ---
 
 ## Troubleshooting
 
+**"Scan failed" error**
+Refresh the VHL page and try again. The extension re-injects the content script automatically, but the first scan after an extension reload sometimes needs a retry.
+
 **✨ buttons don't appear**
-- Make sure the extension is enabled at `chrome://extensions`
-- Reload the page after installing
-- Some pages use iframes for inputs — buttons won't appear inside cross-origin iframes
+VHL Central uses iframes for some exercise types. Buttons only appear on inputs in the main frame or same-origin frames. Cross-origin frames are inaccessible by browser security policy.
 
-**❌ on button click**
-- Check that your API key is saved (open the side panel — if you see the setup screen, re-enter it)
-- Make sure you have Anthropic API credits at https://console.anthropic.com
+**Answer filled but VHL didn't register it**
+Click inside the box and press a key. Some VHL exercise types have additional listeners beyond standard input/change events.
 
-**Answer filled but site didn't register it**
-- Most modern frameworks are supported via native event dispatching
-- If the site still doesn't register the change, click inside the box and press a key to trigger its own listeners
-
-**SCAN PAGE returns nothing**
-- Some sites block content scripts from reading the DOM (heavy SPAs, PDF viewers)
-- Copy and paste the question into the chat input instead
+**Panel doesn't open**
+Make sure you're on a `vhlcentral.com` URL. The side panel is disabled on all other domains.
 
 ---
 
 ## Privacy
 
-- Your API key is stored locally in `chrome.storage.local` — it never touches any server other than `api.anthropic.com`
-- Page content is only sent to the Anthropic API when you click ✨ or SCAN PAGE — the extension does not passively send data
-- No analytics, no tracking, no external services
+- API key stored in `chrome.storage.local` — local only
+- Page content sent to the AI API only when you click AUTOFILL or SCANNING — never passively
+- No analytics, no tracking, no external services beyond the AI API
 
 ---
 
