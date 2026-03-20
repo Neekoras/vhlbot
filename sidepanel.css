@@ -121,7 +121,7 @@ body {
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: #6b6b80;
   cursor: pointer;
   transition: background var(--ease), color var(--ease);
 }
