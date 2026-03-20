@@ -32,10 +32,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+function resolveProvider(storedProvider, apiKey) {
+  // Always trust the key prefix — it's unambiguous
+  if (apiKey && apiKey.startsWith("r8_")) return "replicate";
+  if (apiKey && apiKey.startsWith("sk-ant-")) return "anthropic";
+  return storedProvider || "anthropic";
+}
+
 async function handleFillSpanish(question) {
-  const { apiKey, provider } = await chrome.storage.local.get(["apiKey", "provider"]);
+  const { apiKey, provider: storedProvider } = await chrome.storage.local.get(["apiKey", "provider"]);
   if (!apiKey) throw new Error("No API key saved — open the VHLbot panel to set one up.");
 
+  const provider = resolveProvider(storedProvider, apiKey);
   const messages = [{ role: "user", content: question }];
 
   if (provider === "replicate") {
@@ -44,7 +52,8 @@ async function handleFillSpanish(question) {
   return callClaude({ apiKey, systemPrompt: SPANISH_SYSTEM_PROMPT, messages, maxTokens: 200 });
 }
 
-async function handleChat({ apiKey, provider, systemPrompt, messages }) {
+async function handleChat({ apiKey, provider: payloadProvider, systemPrompt, messages }) {
+  const provider = resolveProvider(payloadProvider, apiKey);
   if (provider === "replicate") {
     return callReplicate({ apiKey, systemPrompt, messages });
   }
