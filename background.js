@@ -96,7 +96,7 @@ async function callReplicate({ apiKey, messages, systemPrompt, maxTokens = 1024 
   }).join("\n") + "\n<|assistant|>";
 
   // Create prediction
-  const createRes = await fetch("https://api.replicate.com/v1/models/meta/meta-llama-3-8b-instruct/predictions", {
+  const createRes = await fetch("https://api.replicate.com/v1/models/anthropic/claude-sonnet-4-5/predictions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -106,8 +106,7 @@ async function callReplicate({ apiKey, messages, systemPrompt, maxTokens = 1024 
       input: {
         prompt,
         system_prompt: systemPrompt,
-        max_new_tokens: maxTokens,
-        temperature: 0.3,
+        max_tokens: maxTokens,
       },
     }),
   });
