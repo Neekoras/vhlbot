@@ -14,7 +14,7 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #6c8ef5;
+  background: #7C5CFC;
   border: none;
   cursor: pointer;
   font-size: 13px;
@@ -27,7 +27,7 @@
 }
 
 .hwa-fill-btn:hover {
-  background: #8aaaf8;
+  background: #9B7FFE;
   transform: scale(1.1);
 }
 

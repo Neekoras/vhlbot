@@ -7,20 +7,28 @@
 
 /* ── Tokens ── */
 :root {
-  --bg:         #0A0A0F;
-  --surface:    #13131A;
-  --surface2:   #16161F;
-  --surface3:   #1C1C2A;
-  --border:     #1E1E2A;
-  --border2:    #222230;
-  --border3:    #2E2E45;
-  --accent:     #7B6EF6;
-  --text:       #EEEAF8;
-  --text-dim:   #CCCAE0;
-  --text-muted: #444455;
-  --header-bg:  #0F0F18;
-  --input-bg:   #131320;
-  --input-bdr:  #222232;
+  /* Backgrounds — consistent warm-purple undertone, not flat blacks */
+  --bg:         #0D0B10;
+  --surface:    #131018;
+  --surface2:   #19161F;
+  --surface3:   #211D2C;
+  --border:     #272330;
+  --border2:    #312B40;
+  --border3:    #3E3654;
+
+  /* Accent — a single grounded indigo, not neon */
+  --accent:     #7C5CFC;
+
+  /* Text — warm whites, readable greys */
+  --text:       #F0EBF8;
+  --text-dim:   #B8B0CC;
+  --text-muted: #6A6280;
+
+  /* Structural */
+  --header-bg:  #100E15;
+  --input-bg:   #100E16;
+  --input-bdr:  #2A2538;
+
   --font-serif: 'Playfair Display', Georgia, serif;
   --font-mono:  'DM Mono', 'Fira Mono', monospace;
   --font-sans:  'DM Sans', system-ui, sans-serif;
@@ -168,7 +176,7 @@ body {
 }
 
 .setup-card button:hover {
-  background: #8f84f8;
+  background: #9B7FFE;
 }
 
 .setup-link {
@@ -194,7 +202,7 @@ header {
   height: 56px;
   padding: 0 16px;
   background: var(--header-bg);
-  border-bottom: 1px solid #1A1A26;
+  border-bottom: 1px solid #201C2A;
   flex-shrink: 0;
 }
 
@@ -230,8 +238,8 @@ header {
 }
 
 .pill-btn:hover {
-  background: #232338;
-  border-color: #3a3a58;
+  background: #221E30;
+  border-color: #3D3654;
 }
 
 .pill-btn:disabled {
@@ -246,8 +254,8 @@ header {
 }
 
 .pill-btn--accent:hover {
-  background: #8f84f8;
-  border-color: #8f84f8;
+  background: #9B7FFE;
+  border-color: #9B7FFE;
 }
 
 /* Gear */
@@ -436,7 +444,7 @@ header {
   gap: 8px;
   padding: 10px 14px;
   background: var(--header-bg);
-  border-top: 1px solid #1A1A26;
+  border-top: 1px solid #201C2A;
   flex-shrink: 0;
 }
 
@@ -482,5 +490,5 @@ header {
   transition: background var(--ease);
 }
 
-#send-btn:hover { background: #8f84f8; }
+#send-btn:hover { background: #9B7FFE; }
 #send-btn:disabled { opacity: 0.35; cursor: default; }
