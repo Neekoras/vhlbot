@@ -46,6 +46,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "SCAN_SCREENSHOT") {
+    scanWithScreenshot(message.payload)
+      .then((result) => sendResponse({ ok: true, result }))
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
   if (message.type === "FILL_SPANISH") {
     handleFillSpanish(message.question)
       .then((answer) => sendResponse({ ok: true, answer }))
@@ -80,6 +87,57 @@ async function handleChat({ apiKey, provider: payloadProvider, systemPrompt, mes
     return callReplicate({ apiKey, systemPrompt, messages });
   }
   return callClaude({ apiKey, systemPrompt, messages });
+}
+
+// ── Screenshot scan ──
+async function scanWithScreenshot({ apiKey, provider }) {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "jpeg", quality: 85 });
+  const base64 = dataUrl.split(",")[1];
+
+  const systemPrompt = `You are VHLbot. You are looking at a screenshot of the student's VHL Central homework page.
+Read everything visible — instructions, questions, blanks, dropdowns, scores, feedback.
+If there are open questions or blanks, answer each one. Give the correct Spanish response. Number them in order.
+If the page shows a graded assignment, identify what was wrong, give the correct answer, and explain why briefly.
+Be direct. No filler.`;
+
+  // Only Anthropic supports vision directly; Replicate falls back to text-only
+  const resolvedProvider = resolveProvider(provider, apiKey);
+
+  if (resolvedProvider === "replicate") {
+    // Replicate vision not supported — tell the user
+    throw new Error("Screenshot scanning requires an Anthropic key. Switch to Anthropic in settings.");
+  }
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+          { type: "text", text: "Read this VHL Central page and help me with the Spanish homework." },
+        ],
+      }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.content[0].text;
 }
 
 // ── Anthropic ──

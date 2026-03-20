@@ -132,8 +132,18 @@ analyzeBtn.addEventListener("click", async () => {
     const response = await chrome.tabs.sendMessage(tab.id, { type: "GET_PAGE_CONTENT" });
     const pageText = response?.content?.trim();
 
-    if (!pageText) {
-      addMessage("assistant", "The page loaded but no readable text was found. Try refreshing VHL and scanning again.");
+    // If DOM gave us very little, fall back to a screenshot
+    const domTooThin = !pageText || pageText.length < 200;
+
+    if (domTooThin) {
+      const screenshotResult = await chrome.runtime.sendMessage({
+        type: "SCAN_SCREENSHOT",
+        payload: { apiKey, provider },
+      });
+      if (!screenshotResult.ok) throw new Error(screenshotResult.error);
+      // response already added by background — just push to history
+      conversationHistory.push({ role: "assistant", content: screenshotResult.result });
+      addMessage("assistant", screenshotResult.result);
       return;
     }
 
