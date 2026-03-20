@@ -14,7 +14,11 @@ Walk through the reasoning step by step. Be direct and concise.`;
 
 function setPanelForTab(tabId, url) {
   const isVHL = (url || "").includes("vhlcentral.com");
-  chrome.sidePanel.setOptions({ tabId, enabled: isVHL, path: "sidepanel.html" });
+  if (isVHL) {
+    chrome.sidePanel.setOptions({ tabId, enabled: true, path: "sidepanel.html" });
+  } else {
+    chrome.sidePanel.setOptions({ tabId, enabled: false });
+  }
 }
 
 // Open on click (only works when enabled)
