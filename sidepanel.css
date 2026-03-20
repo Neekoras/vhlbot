@@ -239,6 +239,17 @@ header {
   cursor: default;
 }
 
+.pill-btn--accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.pill-btn--accent:hover {
+  background: #8f84f8;
+  border-color: #8f84f8;
+}
+
 /* Gear */
 .gear-btn {
   width: 30px;

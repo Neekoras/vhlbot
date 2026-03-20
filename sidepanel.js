@@ -21,6 +21,7 @@ const setupScreen  = document.getElementById("setup-screen");
 const mainScreen   = document.getElementById("main-screen");
 const apiKeyInput  = document.getElementById("api-key-input");
 const saveKeyBtn   = document.getElementById("save-key-btn");
+const autofillBtn  = document.getElementById("autofill-btn");
 const analyzeBtn   = document.getElementById("analyze-btn");
 const settingsBtn  = document.getElementById("settings-btn");
 const messagesEl   = document.getElementById("messages");
@@ -97,6 +98,23 @@ settingsBtn.addEventListener("click", () => {
   messagesEl.innerHTML = "";
   chrome.storage.local.remove("apiKey");
   showSetup();
+});
+
+// ── Autofill all ──
+autofillBtn.addEventListener("click", async () => {
+  autofillBtn.disabled = true;
+  autofillBtn.textContent = "FILLING...";
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    await chrome.tabs.sendMessage(tab.id, { type: "AUTOFILL_ALL" });
+  } catch (err) {
+    console.error("[VHLbot] Autofill error:", err);
+  } finally {
+    setTimeout(() => {
+      autofillBtn.disabled = false;
+      autofillBtn.textContent = "AUTOFILL";
+    }, 1500);
+  }
 });
 
 // ── Scan page ──

@@ -155,7 +155,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "GET_PAGE_CONTENT") {
     sendResponse({ content: extractPageContent() });
   }
+  if (message.type === "AUTOFILL_ALL") {
+    autofillAll();
+    sendResponse({ ok: true });
+  }
 });
+
+async function autofillAll() {
+  const wrappers = document.querySelectorAll(".hwa-wrapper");
+  for (const wrapper of wrappers) {
+    const input = wrapper.querySelector("input, textarea");
+    const btn = wrapper.querySelector("." + BTN_CLASS);
+    if (input && btn && !btn.disabled) {
+      await handleFill(input, btn);
+    }
+  }
+}
 
 function extractPageContent() {
   const clone = document.body.cloneNode(true);
