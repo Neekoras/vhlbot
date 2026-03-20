@@ -105,29 +105,30 @@ body {
   display: flex;
   background: var(--surface2);
   border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 3px;
-  gap: 3px;
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
 }
 
 .provider-opt {
   flex: 1;
-  padding: 6px 0;
+  padding: 10px 0;
   background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-muted);
   cursor: pointer;
   transition: background var(--ease), color var(--ease);
 }
 
 .provider-opt.active {
-  background: var(--surface3);
-  color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .setup-card input {
