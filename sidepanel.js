@@ -13,6 +13,7 @@ Use short paragraphs or numbered steps. Avoid walls of text.`;
 
 // ── State ──
 let apiKey = "";
+let provider = "anthropic"; // "anthropic" | "replicate"
 let conversationHistory = [];
 
 // ── DOM refs ──
@@ -26,11 +27,33 @@ const messagesEl   = document.getElementById("messages");
 const userInput    = document.getElementById("user-input");
 const sendBtn      = document.getElementById("send-btn");
 
+// ── Provider toggle ──
+const providerOpts = document.querySelectorAll(".provider-opt");
+const apiKeyInput2 = document.getElementById("api-key-input");
+const getKeyLink = document.getElementById("get-key-link");
+
+const PROVIDER_META = {
+  anthropic: { placeholder: "sk-ant-...", href: "https://console.anthropic.com/settings/keys" },
+  replicate:  { placeholder: "r8_...",    href: "https://replicate.com/account/api-tokens" },
+};
+
+providerOpts.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    providerOpts.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    provider = btn.dataset.provider;
+    const meta = PROVIDER_META[provider];
+    apiKeyInput2.placeholder = meta.placeholder;
+    getKeyLink.href = meta.href;
+  });
+});
+
 // ── Init ──
 (async () => {
-  const stored = await chrome.storage.local.get("apiKey");
+  const stored = await chrome.storage.local.get(["apiKey", "provider"]);
   if (stored.apiKey) {
     apiKey = stored.apiKey;
+    provider = stored.provider || "anthropic";
     showMain();
   } else {
     showSetup();
@@ -40,13 +63,15 @@ const sendBtn      = document.getElementById("send-btn");
 // ── Setup ──
 saveKeyBtn.addEventListener("click", async () => {
   const key = apiKeyInput.value.trim();
-  if (!key.startsWith("sk-ant-")) {
+  const validKey = (provider === "replicate" && key.startsWith("r8_")) ||
+                   (provider === "anthropic" && key.startsWith("sk-ant-"));
+  if (!validKey) {
     apiKeyInput.style.borderColor = "#c0392b";
     setTimeout(() => (apiKeyInput.style.borderColor = ""), 800);
     return;
   }
   apiKey = key;
-  await chrome.storage.local.set({ apiKey });
+  await chrome.storage.local.set({ apiKey, provider });
   showMain();
 });
 
@@ -136,7 +161,7 @@ async function sendToAssistant(userText, displayLabel = null) {
   try {
     const result = await chrome.runtime.sendMessage({
       type: "CALL_CLAUDE",
-      payload: { apiKey, systemPrompt: SYSTEM_PROMPT, messages: conversationHistory },
+      payload: { apiKey, provider, systemPrompt: SYSTEM_PROMPT, messages: conversationHistory },
     });
 
     typingEl.remove();

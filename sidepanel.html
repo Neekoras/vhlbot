@@ -16,7 +16,13 @@
     <div class="setup-card">
       <div class="setup-mark">V</div>
       <h1 class="setup-brand">VHLbot</h1>
-      <p class="setup-sub">Paste your Anthropic API key to activate.</p>
+      <p class="setup-sub">Choose a provider and paste your API key.</p>
+
+      <div class="provider-toggle">
+        <button class="provider-opt active" data-provider="anthropic">Anthropic</button>
+        <button class="provider-opt" data-provider="replicate">Replicate</button>
+      </div>
+
       <input
         id="api-key-input"
         type="password"
@@ -25,7 +31,7 @@
         spellcheck="false"
       />
       <button id="save-key-btn">Save & continue</button>
-      <a href="https://console.anthropic.com/settings/keys" target="_blank" class="setup-link">
+      <a id="get-key-link" href="https://console.anthropic.com/settings/keys" target="_blank" class="setup-link">
         Get a key →
       </a>
     </div>

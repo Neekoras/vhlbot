@@ -1,4 +1,4 @@
-// Service worker — handles Claude API calls and side panel toggle
+// Service worker — handles Claude / Replicate API calls and side panel toggle
 
 const SPANISH_SYSTEM_PROMPT = `You are a Spanish homework assistant.
 The student is completing a Spanish assignment. Given the question or prompt, respond with ONLY the correct Spanish answer — nothing else.
@@ -8,18 +8,9 @@ If the question asks to conjugate a verb, give just the conjugated form.
 If it asks to fill in a blank, give just the word or phrase that fills the blank.
 Be concise. Answer only.`;
 
-const TUTOR_SYSTEM_PROMPT = `You are HW Assistant, a friendly and encouraging AI tutor helping students understand their homework.
-
-When given page content:
-1. Identify the key questions, problems, or concepts present.
-2. Explain them clearly in plain language the student can understand.
-3. Guide the student toward understanding — do NOT just give away answers outright. Help them think through the problem step by step.
-4. Use analogies and examples where helpful.
-5. Be warm, patient, and supportive — never condescending.
-6. If math is involved, show the steps.
-7. If the content has no homework/questions, say so and offer to help if they paste a question.
-
-Keep responses focused and not overly long. Use bullet points or numbered steps when it aids clarity.`;
+const TUTOR_SYSTEM_PROMPT = `You are VHLbot, a focused Spanish homework assistant.
+When given page content, identify the Spanish questions or exercises present and help the student understand them.
+Walk through the reasoning step by step. Be direct and concise.`;
 
 chrome.action.onClicked.addListener((tab) => {
   chrome.sidePanel.open({ tabId: tab.id });
@@ -27,7 +18,7 @@ chrome.action.onClicked.addListener((tab) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "CALL_CLAUDE") {
-    callClaude(message.payload)
+    handleChat(message.payload)
       .then((result) => sendResponse({ ok: true, result }))
       .catch((err) => sendResponse({ ok: false, error: err.message }));
     return true;
@@ -42,17 +33,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleFillSpanish(question) {
-  const { apiKey } = await chrome.storage.local.get("apiKey");
-  if (!apiKey) throw new Error("No API key saved — open the HW Assistant panel to set one up.");
+  const { apiKey, provider } = await chrome.storage.local.get(["apiKey", "provider"]);
+  if (!apiKey) throw new Error("No API key saved — open the VHLbot panel to set one up.");
 
-  return callClaude({
-    apiKey,
-    systemPrompt: SPANISH_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: question }],
-    maxTokens: 200,
-  });
+  const messages = [{ role: "user", content: question }];
+
+  if (provider === "replicate") {
+    return callReplicate({ apiKey, systemPrompt: SPANISH_SYSTEM_PROMPT, messages, maxTokens: 200 });
+  }
+  return callClaude({ apiKey, systemPrompt: SPANISH_SYSTEM_PROMPT, messages, maxTokens: 200 });
 }
 
+async function handleChat({ apiKey, provider, systemPrompt, messages }) {
+  if (provider === "replicate") {
+    return callReplicate({ apiKey, systemPrompt, messages });
+  }
+  return callClaude({ apiKey, systemPrompt, messages });
+}
+
+// ── Anthropic ──
 async function callClaude({ apiKey, messages, systemPrompt, maxTokens = 1024 }) {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -72,9 +71,71 @@ async function callClaude({ apiKey, messages, systemPrompt, maxTokens = 1024 }) 
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `HTTP ${response.status}`);
+    throw new Error(err?.error?.message || `Anthropic HTTP ${response.status}`);
   }
 
   const data = await response.json();
   return data.content[0].text;
+}
+
+// ── Replicate ──
+async function callReplicate({ apiKey, messages, systemPrompt, maxTokens = 1024 }) {
+  // Build a single prompt string from the conversation
+  const prompt = messages.map((m) => {
+    const tag = m.role === "user" ? "user" : "assistant";
+    return `<|${tag}|>\n${m.content}`;
+  }).join("\n") + "\n<|assistant|>";
+
+  // Create prediction
+  const createRes = await fetch("https://api.replicate.com/v1/models/meta/meta-llama-3-8b-instruct/predictions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      input: {
+        prompt,
+        system_prompt: systemPrompt,
+        max_new_tokens: maxTokens,
+        temperature: 0.3,
+      },
+    }),
+  });
+
+  if (!createRes.ok) {
+    const err = await createRes.json().catch(() => ({}));
+    throw new Error(err?.detail || `Replicate HTTP ${createRes.status}`);
+  }
+
+  const prediction = await createRes.json();
+
+  // Poll until done
+  return pollReplicate(apiKey, prediction.id);
+}
+
+async function pollReplicate(apiKey, id) {
+  const maxAttempts = 30;
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((r) => setTimeout(r, 800));
+
+    const res = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
+      headers: { "Authorization": `Bearer ${apiKey}` },
+    });
+
+    if (!res.ok) throw new Error(`Replicate poll HTTP ${res.status}`);
+
+    const data = await res.json();
+
+    if (data.status === "succeeded") {
+      // output is an array of string chunks
+      return Array.isArray(data.output) ? data.output.join("") : data.output;
+    }
+
+    if (data.status === "failed" || data.status === "canceled") {
+      throw new Error(data.error || "Replicate prediction failed");
+    }
+  }
+
+  throw new Error("Replicate timed out");
 }
