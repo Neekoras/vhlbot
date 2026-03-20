@@ -12,11 +12,25 @@ const TUTOR_SYSTEM_PROMPT = `You are VHLbot, a focused Spanish homework assistan
 When given page content, identify the Spanish questions or exercises present and help the student understand them.
 Walk through the reasoning step by step. Be direct and concise.`;
 
+function setPanelForTab(tabId, url) {
+  const isVHL = (url || "").includes("vhlcentral.com");
+  chrome.sidePanel.setOptions({ tabId, enabled: isVHL, path: "sidepanel.html" });
+}
+
+// Open on click (only works when enabled)
 chrome.action.onClicked.addListener((tab) => {
-  const url = tab.url || "";
-  if (url.includes("vhlcentral.com")) {
-    chrome.sidePanel.open({ tabId: tab.id });
-  }
+  chrome.sidePanel.open({ tabId: tab.id });
+});
+
+// URL changes within a tab
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.url) setPanelForTab(tabId, changeInfo.url);
+});
+
+// Switching between tabs
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  if (tab) setPanelForTab(tabId, tab.url);
 });
 
 
