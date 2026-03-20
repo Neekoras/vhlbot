@@ -173,22 +173,48 @@ async function autofillAll() {
 }
 
 function extractPageContent() {
+  const parts = [];
+
+  // ── Main page text ──
   const clone = document.body.cloneNode(true);
   for (const el of clone.querySelectorAll(
     "script, style, nav, footer, header, [aria-hidden='true'], .hwa-wrapper"
-  )) {
-    el.remove();
-  }
+  )) el.remove();
+
   const main =
     clone.querySelector("main") ||
     clone.querySelector('[role="main"]') ||
     clone.querySelector("article") ||
     clone;
 
-  return (main.innerText || main.textContent || "")
+  const mainText = (main.innerText || main.textContent || "").trim();
+  if (mainText) parts.push(mainText);
+
+  // ── Same-origin iframes (where VHL loads exercises) ──
+  for (const iframe of document.querySelectorAll("iframe")) {
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) continue;
+      const body = doc.body;
+      if (!body) continue;
+
+      // Clone and strip noise
+      const iclone = body.cloneNode(true);
+      for (const el of iclone.querySelectorAll("script, style, [aria-hidden='true']")) {
+        el.remove();
+      }
+      const text = (iclone.innerText || iclone.textContent || "").trim();
+      if (text.length > 20) parts.push(`[Exercise frame]\n${text}`);
+    } catch (_) {
+      // Cross-origin iframe — skip silently
+    }
+  }
+
+  return parts
+    .join("\n\n")
     .replace(/\t/g, " ")
     .replace(/ {2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim()
-    .slice(0, 6000);
+    .slice(0, 8000);
 }

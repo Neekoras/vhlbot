@@ -122,18 +122,25 @@ analyzeBtn.addEventListener("click", async () => {
   setPillActive(analyzeBtn, true);
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    // Inject the content script if it isn't loaded yet (e.g. after extension reload)
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["content.js"],
+    }).catch(() => {}); // already injected = harmless error
+
     const response = await chrome.tabs.sendMessage(tab.id, { type: "GET_PAGE_CONTENT" });
     const pageText = response?.content?.trim();
 
     if (!pageText) {
-      addMessage("assistant", "Couldn't read this page. Navigate to your assignment and try again, or paste a question below.");
+      addMessage("assistant", "The page loaded but no readable text was found. Try refreshing VHL and scanning again.");
       return;
     }
 
-    const userMsg = `Here is the page content. Identify any Spanish homework questions and help me understand them:\n\n---\n${pageText}\n---`;
+    const userMsg = `Here is the full text content of the student's VHL Central page. Read it carefully — find the instructions, the questions, and any scores or feedback.\n\n---\n${pageText}\n---`;
     await sendToAssistant(userMsg, null, true);
   } catch (err) {
-    addMessage("assistant", "Couldn't read this page — some sites block extensions. Paste your question below instead.");
+    addMessage("assistant", `Scan failed: ${err.message}. Try refreshing the VHL page and clicking Scanning again.`);
   } finally {
     setPillActive(analyzeBtn, false);
   }
