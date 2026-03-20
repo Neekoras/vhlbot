@@ -19,15 +19,25 @@ chrome.action.onClicked.addListener((tab) => {
   }
 });
 
-// Close side panel when navigating away from vhlcentral.com
+function applyPanelPolicy(tabId, url) {
+  const onVHL = (url || "").includes("vhlcentral.com");
+  chrome.sidePanel.setOptions({
+    tabId,
+    enabled: onVHL,
+    path: "sidepanel.html",
+  });
+}
+
+// When a tab finishes navigating (URL is final)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status !== "loading") return;
-  const url = tab.url || "";
-  if (!url.includes("vhlcentral.com")) {
-    chrome.sidePanel.setOptions({ tabId, enabled: false });
-  } else {
-    chrome.sidePanel.setOptions({ tabId, enabled: true, path: "sidepanel.html" });
-  }
+  if (changeInfo.status !== "complete") return;
+  applyPanelPolicy(tabId, tab.url);
+});
+
+// When switching tabs
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  const tab = await chrome.tabs.get(tabId);
+  applyPanelPolicy(tabId, tab.url);
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
