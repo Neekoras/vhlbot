@@ -28,8 +28,6 @@ const userInput    = document.getElementById("user-input");
 const sendBtn      = document.getElementById("send-btn");
 
 // ── Provider toggle ──
-const providerOpts = document.querySelectorAll(".provider-opt");
-const apiKeyInput2 = document.getElementById("api-key-input");
 const getKeyLink = document.getElementById("get-key-link");
 
 const PROVIDER_META = {
@@ -37,15 +35,17 @@ const PROVIDER_META = {
   replicate:  { placeholder: "r8_...",    href: "https://replicate.com/account/api-tokens" },
 };
 
-providerOpts.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    providerOpts.forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    provider = btn.dataset.provider;
-    const meta = PROVIDER_META[provider];
-    apiKeyInput2.placeholder = meta.placeholder;
-    getKeyLink.href = meta.href;
+function selectProvider(selected) {
+  provider = selected;
+  document.querySelectorAll(".provider-opt").forEach((b) => {
+    b.classList.toggle("active", b.dataset.provider === selected);
   });
+  apiKeyInput.placeholder = PROVIDER_META[selected].placeholder;
+  getKeyLink.href = PROVIDER_META[selected].href;
+}
+
+document.querySelectorAll(".provider-opt").forEach((btn) => {
+  btn.addEventListener("click", () => selectProvider(btn.dataset.provider));
 });
 
 // ── Init ──

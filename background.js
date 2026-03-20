@@ -13,7 +13,10 @@ When given page content, identify the Spanish questions or exercises present and
 Walk through the reasoning step by step. Be direct and concise.`;
 
 chrome.action.onClicked.addListener((tab) => {
-  chrome.sidePanel.open({ tabId: tab.id });
+  const url = tab.url || "";
+  if (url.includes("vhlcentral.com")) {
+    chrome.sidePanel.open({ tabId: tab.id });
+  }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
