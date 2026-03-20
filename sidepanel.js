@@ -115,7 +115,7 @@ analyzeBtn.addEventListener("click", async () => {
     }
 
     const userMsg = `Here is the page content. Identify any Spanish homework questions and help me understand them:\n\n---\n${pageText}\n---`;
-    await sendToAssistant(userMsg, "Scanning page for Spanish questions...");
+    await sendToAssistant(userMsg, null, true);
   } catch (err) {
     addMessage("assistant", `Couldn't read this page — some sites block extensions. Paste your question below instead.`);
   } finally {
@@ -149,10 +149,10 @@ async function handleSend() {
 }
 
 // ── Core send ──
-async function sendToAssistant(userText, displayLabel = null) {
+async function sendToAssistant(userText, displayLabel = null, silent = false) {
   clearEmptyState();
 
-  addMessage("user", displayLabel || userText);
+  if (!silent) addMessage("user", displayLabel || userText);
   conversationHistory.push({ role: "user", content: userText });
 
   const typingEl = addTyping();
