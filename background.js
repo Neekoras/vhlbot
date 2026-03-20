@@ -19,6 +19,17 @@ chrome.action.onClicked.addListener((tab) => {
   }
 });
 
+// Close side panel when navigating away from vhlcentral.com
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status !== "loading") return;
+  const url = tab.url || "";
+  if (!url.includes("vhlcentral.com")) {
+    chrome.sidePanel.setOptions({ tabId, enabled: false });
+  } else {
+    chrome.sidePanel.setOptions({ tabId, enabled: true, path: "sidepanel.html" });
+  }
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "CALL_CLAUDE") {
     handleChat(message.payload)
