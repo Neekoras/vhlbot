@@ -13,24 +13,23 @@ Use short paragraphs or numbered steps. Avoid walls of text.`;
 
 // ── State ──
 let apiKey = "";
-let provider = "anthropic"; // "anthropic" | "replicate"
+let provider = "anthropic";
 let conversationHistory = [];
 
 // ── DOM refs ──
-const setupScreen  = document.getElementById("setup-screen");
-const mainScreen   = document.getElementById("main-screen");
-const apiKeyInput  = document.getElementById("api-key-input");
-const saveKeyBtn   = document.getElementById("save-key-btn");
-const autofillBtn  = document.getElementById("autofill-btn");
-const analyzeBtn   = document.getElementById("analyze-btn");
-const settingsBtn  = document.getElementById("settings-btn");
-const messagesEl   = document.getElementById("messages");
-const userInput    = document.getElementById("user-input");
-const sendBtn      = document.getElementById("send-btn");
+const setupScreen = document.getElementById("setup-screen");
+const mainScreen  = document.getElementById("main-screen");
+const apiKeyInput = document.getElementById("api-key-input");
+const saveKeyBtn  = document.getElementById("save-key-btn");
+const autofillBtn = document.getElementById("autofill-btn");
+const analyzeBtn  = document.getElementById("analyze-btn");
+const settingsBtn = document.getElementById("settings-btn");
+const messagesEl  = document.getElementById("messages");
+const userInput   = document.getElementById("user-input");
+const sendBtn     = document.getElementById("send-btn");
+const getKeyLink  = document.getElementById("get-key-link");
 
 // ── Provider toggle ──
-const getKeyLink = document.getElementById("get-key-link");
-
 const PROVIDER_META = {
   anthropic: { placeholder: "sk-ant-...", href: "https://console.anthropic.com/settings/keys" },
   replicate:  { placeholder: "r8_...",    href: "https://replicate.com/account/api-tokens" },
@@ -67,8 +66,8 @@ saveKeyBtn.addEventListener("click", async () => {
   const validKey = (provider === "replicate" && key.startsWith("r8_")) ||
                    (provider === "anthropic" && key.startsWith("sk-ant-"));
   if (!validKey) {
-    apiKeyInput.style.borderColor = "#c0392b";
-    setTimeout(() => (apiKeyInput.style.borderColor = ""), 800);
+    apiKeyInput.style.borderColor = "#4A2A2A";
+    setTimeout(() => (apiKeyInput.style.borderColor = ""), 600);
     return;
   }
   apiKey = key;
@@ -76,11 +75,9 @@ saveKeyBtn.addEventListener("click", async () => {
   showMain();
 });
 
-apiKeyInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") saveKeyBtn.click();
-});
+apiKeyInput.addEventListener("keydown", (e) => { if (e.key === "Enter") saveKeyBtn.click(); });
 
-// ── Screen switching ──
+// ── Screens ──
 function showSetup() {
   setupScreen.classList.remove("hidden");
   mainScreen.classList.add("hidden");
@@ -100,28 +97,22 @@ settingsBtn.addEventListener("click", () => {
   showSetup();
 });
 
-// ── Autofill all ──
+// ── Autofill ──
 autofillBtn.addEventListener("click", async () => {
-  autofillBtn.disabled = true;
-  autofillBtn.textContent = "FILLING...";
+  setPillActive(autofillBtn, true);
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     await chrome.tabs.sendMessage(tab.id, { type: "AUTOFILL_ALL" });
   } catch (err) {
-    console.error("[VHLbot] Autofill error:", err);
+    console.error("[VHLbot]", err);
   } finally {
-    setTimeout(() => {
-      autofillBtn.disabled = false;
-      autofillBtn.textContent = "AUTOFILL";
-    }, 1500);
+    setTimeout(() => setPillActive(autofillBtn, false), 1200);
   }
 });
 
-// ── Scan page ──
+// ── Scan ──
 analyzeBtn.addEventListener("click", async () => {
-  analyzeBtn.disabled = true;
-  analyzeBtn.textContent = "SCANNING";
-
+  setPillActive(analyzeBtn, true);
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const response = await chrome.tabs.sendMessage(tab.id, { type: "GET_PAGE_CONTENT" });
@@ -135,27 +126,27 @@ analyzeBtn.addEventListener("click", async () => {
     const userMsg = `Here is the page content. Identify any Spanish homework questions and help me understand them:\n\n---\n${pageText}\n---`;
     await sendToAssistant(userMsg, null, true);
   } catch (err) {
-    addMessage("assistant", `Couldn't read this page — some sites block extensions. Paste your question below instead.`);
+    addMessage("assistant", "Couldn't read this page — some sites block extensions. Paste your question below instead.");
   } finally {
-    analyzeBtn.disabled = false;
-    analyzeBtn.textContent = "SCAN PAGE";
+    setPillActive(analyzeBtn, false);
   }
 });
 
-// ── Chat input ──
+function setPillActive(btn, on) {
+  btn.classList.toggle("active", on);
+  btn.disabled = on;
+}
+
+// ── Chat ──
 sendBtn.addEventListener("click", handleSend);
 
 userInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    handleSend();
-  }
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
 });
 
-// Auto-resize textarea
 userInput.addEventListener("input", () => {
   userInput.style.height = "auto";
-  userInput.style.height = Math.min(userInput.scrollHeight, 96) + "px";
+  userInput.style.height = Math.min(userInput.scrollHeight, 88) + "px";
 });
 
 async function handleSend() {
@@ -198,6 +189,11 @@ async function sendToAssistant(userText, displayLabel = null, silent = false) {
 
 // ── UI helpers ──
 function addMessage(role, text) {
+  // Remove is-latest from all previous assistant bubbles
+  if (role === "assistant") {
+    messagesEl.querySelectorAll(".msg-bubble.is-latest").forEach((b) => b.classList.remove("is-latest"));
+  }
+
   const wrapper = document.createElement("div");
   wrapper.className = `message ${role}`;
 
@@ -206,7 +202,7 @@ function addMessage(role, text) {
   label.textContent = role === "user" ? "You" : "VHLbot";
 
   const bubble = document.createElement("div");
-  bubble.className = "msg-bubble";
+  bubble.className = "msg-bubble" + (role === "assistant" ? " is-latest" : "");
   bubble.innerHTML = renderMarkdown(text);
 
   wrapper.appendChild(label);
@@ -242,26 +238,25 @@ function renderEmptyState() {
   el.innerHTML = `
     <div class="icon-tile">V</div>
     <div class="empty-title">VHLbot</div>
-    <div class="empty-body">Click Scan Page to read your assignment, or type a question below.</div>
+    <div class="empty-body">Press scanning to read your page, or type a question.</div>
   `;
   messagesEl.appendChild(el);
 }
 
-function clearEmptyState() {
-  document.getElementById("empty-state")?.remove();
-}
+function clearEmptyState() { document.getElementById("empty-state")?.remove(); }
 
 function setInputLocked(locked) {
   userInput.disabled = locked;
   sendBtn.disabled = locked;
   analyzeBtn.disabled = locked;
+  autofillBtn.disabled = locked;
 }
 
 function scrollToBottom() {
   document.getElementById("chat-container").scrollTop = 999999;
 }
 
-// ── Markdown renderer ──
+// ── Markdown ──
 function renderMarkdown(text) {
   let html = text
     .replace(/&/g, "&amp;")
@@ -276,14 +271,11 @@ function renderMarkdown(text) {
   html = html.replace(/((<li>.*<\/li>\n?)+)/g, "<ol>$1</ol>");
   html = html.replace(/^[-•] (.+)$/gm, "<li>$1</li>");
   html = html.replace(/((<li>.*<\/li>\n?)+)/g, (m) => m.startsWith("<ol>") ? m : `<ul>${m}</ul>`);
-  html = html
-    .split(/\n\n+/)
-    .map((p) => {
-      p = p.trim();
-      if (/^<(pre|ul|ol)/.test(p)) return p;
-      return `<p>${p.replace(/\n/g, "<br/>")}</p>`;
-    })
-    .join("\n");
+  html = html.split(/\n\n+/).map((p) => {
+    p = p.trim();
+    if (/^<(pre|ul|ol)/.test(p)) return p;
+    return `<p>${p.replace(/\n/g, "<br/>")}</p>`;
+  }).join("\n");
 
   return html;
 }
