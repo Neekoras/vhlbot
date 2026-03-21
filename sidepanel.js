@@ -1,22 +1,21 @@
 // VHLbot — side panel logic
 
-const SYSTEM_PROMPT = `You are VHLbot. You read the student's VHL Central page and help them with their Spanish homework.
+const SYSTEM_PROMPT = `You are VHLbot, a Spanish homework assistant embedded in the student's browser. You have direct access to the page — either as extracted text or a screenshot. You are already looking at the assignment.
 
-If the page has open/unanswered questions:
-- Find every question, prompt, or blank on the page.
-- Answer each one directly. Correct Spanish only. Numbered list, same order as the page.
-- Never say you cannot see the screen — the page text is right there.
+Rules:
+- Never ask the student to describe the screen, paste content, or share anything. You have it already.
+- Never say "I can see" or "based on what you shared." Just answer.
+- Never say you cannot see or access the page.
 
-If the page shows a graded or completed assignment:
-- Read the instructions and the actual questions carefully — they are on the page, dig for them.
-- Identify which answers were marked wrong (0 points, incorrect, red, etc).
-- For each wrong answer: state what the question was asking, what the correct answer is, and explain WHY in one or two sentences — grammar rule, vocabulary, context.
-- Do not just report the score. The student already knows the score. They need to understand the mistake.
-- If the instructions or prompts are visible, use them to explain what was expected.
+When given page content or a screenshot:
+- Find every Spanish question, prompt, blank, or exercise on the page.
+- Answer each one. Correct Spanish only. Number them in page order.
+- If the page is graded, find every item marked wrong. For each: what was asked, the correct answer, one sentence explaining why.
+- Do not report scores back. The student sees the score. Give them the understanding.
 
-Secondary — student questions:
-- Answer follow-ups briefly. Grammar, vocab, conjugations. Short unless detail is needed.
-- Do not volunteer explanations unprompted. Answer and stop.`;
+When the student types a follow-up:
+- Answer directly. Grammar, vocab, conjugations — brief unless detail is needed.
+- Do not volunteer explanations they didn't ask for.`;
 
 // ── State ──
 let apiKey = "";
@@ -61,11 +60,27 @@ document.querySelectorAll(".provider-opt").forEach((btn) => {
   if (stored.apiKey) {
     apiKey = stored.apiKey;
     provider = stored.provider || "anthropic";
+    await restoreChat();
     showMain();
   } else {
     showSetup();
   }
 })();
+
+async function saveChat() {
+  await chrome.storage.session.set({
+    chatHistory: conversationHistory,
+    chatHTML: messagesEl.innerHTML,
+  });
+}
+
+async function restoreChat() {
+  const saved = await chrome.storage.session.get(["chatHistory", "chatHTML"]);
+  if (saved.chatHTML) {
+    messagesEl.innerHTML = saved.chatHTML;
+    conversationHistory = saved.chatHistory || [];
+  }
+}
 
 // ── Setup ──
 saveKeyBtn.addEventListener("click", async () => {
@@ -101,6 +116,7 @@ settingsBtn.addEventListener("click", () => {
   conversationHistory = [];
   messagesEl.innerHTML = "";
   chrome.storage.local.remove("apiKey");
+  chrome.storage.session.remove(["chatHistory", "chatHTML"]);
   showSetup();
 });
 
@@ -144,6 +160,7 @@ analyzeBtn.addEventListener("click", async () => {
       // response already added by background — just push to history
       conversationHistory.push({ role: "assistant", content: screenshotResult.result });
       addMessage("assistant", screenshotResult.result);
+      saveChat();
       return;
     }
 
@@ -185,7 +202,10 @@ async function handleSend() {
 async function sendToAssistant(userText, displayLabel = null, silent = false) {
   clearEmptyState();
 
-  if (!silent) addMessage("user", displayLabel || userText);
+  if (!silent) {
+    addMessage("user", displayLabel || userText);
+    saveChat();
+  }
   conversationHistory.push({ role: "user", content: userText });
 
   const typingEl = addTyping();
@@ -202,6 +222,7 @@ async function sendToAssistant(userText, displayLabel = null, silent = false) {
 
     conversationHistory.push({ role: "assistant", content: result.result });
     addMessage("assistant", result.result);
+    saveChat();
   } catch (err) {
     typingEl.remove();
     addMessage("assistant", `Error: ${err.message}`);
