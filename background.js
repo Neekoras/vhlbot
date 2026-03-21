@@ -8,9 +8,6 @@ If the question asks to conjugate a verb, give just the conjugated form.
 If it asks to fill in a blank, give just the word or phrase that fills the blank.
 Be concise. Answer only.`;
 
-const TUTOR_SYSTEM_PROMPT = `You are VHLbot, a focused Spanish homework assistant.
-When given page content, identify the Spanish questions or exercises present and help the student understand them.
-Walk through the reasoning step by step. Be direct and concise.`;
 
 function setPanelForTab(tabId, url) {
   const isVHL = (url || "").includes("vhlcentral.com");

@@ -113,8 +113,11 @@ function showMain() {
 
 settingsBtn.addEventListener("click", () => {
   apiKey = "";
+  provider = "anthropic";
   conversationHistory = [];
   messagesEl.innerHTML = "";
+  apiKeyInput.value = "";
+  selectProvider("anthropic");
   chrome.storage.local.remove("apiKey");
   chrome.storage.session.remove(["chatHistory", "chatHTML"]);
   showSetup();
@@ -313,9 +316,13 @@ function renderMarkdown(text) {
   html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
   html = html.replace(/^\d+\. (.+)$/gm, "<li>$1</li>");
-  html = html.replace(/((<li>.*<\/li>\n?)+)/g, "<ol>$1</ol>");
+  html = html.replace(/((<li>[^\n]+<\/li>\n?)+)/g, "<ol>$1</ol>");
+  // Hide ordered lists before wrapping bullet items to avoid double-wrapping
+  const olBlocks = [];
+  html = html.replace(/<ol>[\s\S]*?<\/ol>/g, (m) => { olBlocks.push(m); return `\x00OL${olBlocks.length - 1}\x00`; });
   html = html.replace(/^[-•] (.+)$/gm, "<li>$1</li>");
-  html = html.replace(/((<li>.*<\/li>\n?)+)/g, (m) => m.startsWith("<ol>") ? m : `<ul>${m}</ul>`);
+  html = html.replace(/((<li>[^\n]+<\/li>\n?)+)/g, "<ul>$1</ul>");
+  html = html.replace(/\x00OL(\d+)\x00/g, (_, i) => olBlocks[+i]);
   html = html.split(/\n\n+/).map((p) => {
     p = p.trim();
     if (/^<(pre|ul|ol)/.test(p)) return p;
